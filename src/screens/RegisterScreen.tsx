@@ -150,7 +150,7 @@ export default function RegisterScreen({ navigation }: Props) {
             />
 
             <GlowButton
-              title="DAFTAR →"
+              title="DAFTAR"
               onPress={register}
               loading={loading}
             />

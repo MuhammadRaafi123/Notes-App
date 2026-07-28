@@ -124,7 +124,7 @@ export default function LoginScreen({ navigation }: Props) {
             </TouchableOpacity>
 
             <GlowButton
-              title="MASUK →"
+              title="MASUK"
               onPress={login}
               loading={loading}
             />
