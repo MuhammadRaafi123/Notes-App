@@ -356,7 +356,7 @@ export default function HomeScreen({ navigation }: Props) {
       <StatusBar style="dark" />
       <Background />
 
-      <View style={styles.container}>
+      <View style={[styles.container, { flex: 1 }]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
