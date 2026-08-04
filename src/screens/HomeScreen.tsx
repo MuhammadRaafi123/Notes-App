@@ -22,6 +22,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Background from '../components/Background';
+import Navbar from '../components/navbar/Navbar';
 import styles from '../styles/HomeStyle';
 import { supabase } from '../services/supabase';
 import { Note } from '../types/note';
@@ -36,7 +37,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [userEmail, setUserEmail] = useState('');
 
-  //  Buat fiter search
+  // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
 
@@ -55,21 +56,14 @@ export default function HomeScreen({ navigation }: Props) {
       if (onOk) onOk();
     } else {
       Alert.alert(title, message, [
-        {
-          text: 'OK',
-          onPress: () => {
-            if (onOk) onOk();
-          },
-        },
+        { text: 'OK', onPress: () => { if (onOk) onOk(); } },
       ]);
     }
   };
 
   const fetchNotes = useCallback(async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
         navigation.replace('Login');
@@ -133,9 +127,7 @@ export default function HomeScreen({ navigation }: Props) {
 
     setSaving(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
         showAlert('Kesalahan', 'Sesi berakhir. Silakan masuk kembali.');
@@ -163,13 +155,9 @@ export default function HomeScreen({ navigation }: Props) {
           .eq('id', editingNote.id);
 
         if (error) {
-          console.warn('Fallback update without extra fields:', error.message);
           const { error: fallbackErr } = await supabase
             .from('notes')
-            .update({
-              title: title.trim(),
-              content: content.trim(),
-            })
+            .update({ title: title.trim(), content: content.trim() })
             .eq('id', editingNote.id);
 
           if (fallbackErr) {
@@ -181,13 +169,8 @@ export default function HomeScreen({ navigation }: Props) {
         const { error } = await supabase.from('notes').insert([notePayload]);
 
         if (error) {
-          console.warn('Fallback insert without extra fields:', error.message);
           const { error: fallbackErr } = await supabase.from('notes').insert([
-            {
-              title: title.trim(),
-              content: content.trim(),
-              user_id: user.id,
-            },
+            { title: title.trim(), content: content.trim(), user_id: user.id },
           ]);
 
           if (fallbackErr) {
@@ -213,10 +196,7 @@ export default function HomeScreen({ navigation }: Props) {
     );
 
     try {
-      await supabase
-        .from('notes')
-        .update({ is_pinned: newPinnedState })
-        .eq('id', note.id);
+      await supabase.from('notes').update({ is_pinned: newPinnedState }).eq('id', note.id);
     } catch (err) {
       console.warn('Pin status update failed on server:', err);
     }
@@ -245,25 +225,6 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
-  const handleLogout = () => {
-    const doLogout = async () => {
-      await supabase.auth.signOut();
-      navigation.replace('Login');
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm('Apakah Anda yakin ingin keluar?')) {
-        doLogout();
-      }
-    } else {
-      Alert.alert('Keluar', 'Apakah Anda yakin ingin keluar?', [
-        { text: 'Batal', style: 'cancel' },
-        { text: 'Keluar', style: 'destructive', onPress: doLogout },
-      ]);
-    }
-  };
-
-  // Filter notes by search & category
   const filteredNotes = useMemo(() => {
     return notes.filter((n) => {
       const matchesSearch =
@@ -271,7 +232,6 @@ export default function HomeScreen({ navigation }: Props) {
         n.content.toLowerCase().includes(searchQuery.toLowerCase());
 
       if (!matchesSearch) return false;
-
       if (selectedCategory === 'Semua') return true;
       if (selectedCategory === 'Favorit') return !!n.is_pinned;
       return (n.category || 'Pribadi') === selectedCategory;
@@ -299,8 +259,9 @@ export default function HomeScreen({ navigation }: Props) {
 
   const userInitial = userEmail ? userEmail.charAt(0).toUpperCase() : 'U';
 
-  const renderNoteItem = ({ item }: { item: Note }) => (
+  const renderNoteItem = (item: Note) => (
     <TouchableOpacity
+      key={item.id}
       style={styles.noteCard}
       activeOpacity={0.8}
       onPress={() => openEditModal(item)}
@@ -357,274 +318,201 @@ export default function HomeScreen({ navigation }: Props) {
       <Background />
 
       <View style={[styles.container, { flex: 1 }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View style={styles.userBadge}>
-              <LinearGradient
-                colors={['#5B8EA6', '#3D6C82']}
-                style={styles.avatar}
-              >
-                <Text style={styles.avatarText}>{userInitial}</Text>
-              </LinearGradient>
-              <View>
-                <Text style={styles.greeting}>Selamat datang,</Text>
-                <Text style={styles.username}>
-                  {userEmail ? userEmail.split('@')[0] : 'Pengguna'}
-                </Text>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#5B8EA6']} tintColor="#5B8EA6" />
+          }
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={[styles.headerTop, { justifyContent: 'flex-start' }]}>
+              <View style={styles.userBadge}>
+                <LinearGradient colors={['#5B8EA6', '#3D6C82']} style={styles.avatar}>
+                  <Text style={styles.avatarText}>{userInitial}</Text>
+                </LinearGradient>
+                <View>
+                  <Text style={styles.greeting}>Selamat datang,</Text>
+                  <Text style={styles.username}>
+                    {userEmail ? userEmail.split('@')[0] : 'Pengguna'}
+                  </Text>
+                </View>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={20} color="#D9534F" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.headerTitleSection}>
-            <Text style={styles.headerTitle}>
-              Dashboard <Text style={styles.headerAccent}>Catatan</Text>
-            </Text>
-          </View>
-        </View>
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#7A8D9C" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cari catatan berdasarkan judul atau isi..."
-            placeholderTextColor="#A0B0BC"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color="#A0B0BC" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View style={styles.statHeader}>
-              <Ionicons name="document-text" size={18} color="#5B8EA6" />
-              <Text style={styles.statNumber}>{notes.length}</Text>
-            </View>
-            <Text style={styles.statLabel}>Total Catatan</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statHeader}>
-              <Ionicons name="pin" size={18} color="#5B8EA6" />
-              <Text style={styles.statNumber}>{pinnedNotes.length}</Text>
-            </View>
-            <Text style={styles.statLabel}>Disematkan</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statHeader}>
-              <Ionicons name="calendar-outline" size={18} color="#5B8EA6" />
-              <Text style={styles.statNumber}>
-                {
-                  notes.filter((n) => {
-                    const diffDays =
-                      (new Date().getTime() - new Date(n.created_at).getTime()) /
-                      (1000 * 3600 * 24);
-                    return diffDays <= 7;
-                  }).length
-                }
+            <View style={styles.headerTitleSection}>
+              <Text style={styles.headerTitle}>
+                Dashboard <Text style={styles.headerAccent}>Catatan</Text>
               </Text>
             </View>
-            <Text style={styles.statLabel}>Minggu Ini</Text>
           </View>
-        </View>
 
-        {/* Category Filters Scroll */}
-        <View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesContainer}
-          >
-            {CATEGORIES.map((cat) => {
-              const isActive = selectedCategory === cat;
-              return (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryChip,
-                    isActive && styles.categoryChipActive,
-                  ]}
-                  onPress={() => setSelectedCategory(cat)}
-                >
-                  <Text
-                    style={[
-                      styles.categoryChipText,
-                      isActive && styles.categoryChipTextActive,
-                    ]}
-                  >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search-outline" size={20} color="#7A8D9C" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Cari catatan berdasarkan judul atau isi..."
+              placeholderTextColor="#A0B0BC"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color="#A0B0BC" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
-        {/* Pinned Notes Highlight Section */}
-        {pinnedNotes.length > 0 && selectedCategory === 'Semua' && !searchQuery ? (
-          <View>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Catatan Disematkan</Text>
-              <Text style={styles.sectionBadge}>{pinnedNotes.length} disematkan</Text>
+          {/* Stats Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Ionicons name="document-text" size={18} color="#5B8EA6" />
+                <Text style={styles.statNumber}>{notes.length}</Text>
+              </View>
+              <Text style={styles.statLabel}>Total Catatan</Text>
             </View>
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Ionicons name="pin" size={18} color="#5B8EA6" />
+                <Text style={styles.statNumber}>{pinnedNotes.length}</Text>
+              </View>
+              <Text style={styles.statLabel}>Disematkan</Text>
+            </View>
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Ionicons name="calendar-outline" size={18} color="#5B8EA6" />
+                <Text style={styles.statNumber}>
+                  {
+                    notes.filter((n) => {
+                      const diffDays =
+                        (new Date().getTime() - new Date(n.created_at).getTime()) /
+                        (1000 * 3600 * 24);
+                      return diffDays <= 7;
+                    }).length
+                  }
+                </Text>
+              </View>
+              <Text style={styles.statLabel}>Minggu Ini</Text>
+            </View>
+          </View>
+
+          {/* Category Filters */}
+          <View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.pinnedList}
+              contentContainerStyle={styles.categoriesContainer}
             >
-              {pinnedNotes.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.pinnedCard}
-                  activeOpacity={0.85}
-                  onPress={() => openEditModal(item)}
-                >
-                  <View style={styles.pinnedCardHeader}>
-                    <View style={styles.pinBadge}>
-                      <Ionicons name="pin" size={12} color="#5B8EA6" />
-                      <Text style={styles.pinBadgeText}>Disematkan</Text>
-                    </View>
-                    {item.category ? (
-                      <Text style={styles.noteCategoryText}>{item.category}</Text>
-                    ) : null}
-                  </View>
-                  <Text style={styles.pinnedTitle} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <Text style={styles.pinnedContent} numberOfLines={2}>
-                    {item.content || 'Tidak ada isi...'}
-                  </Text>
-                  <Text style={styles.pinnedDate}>{formatDate(item.created_at)}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
-
-        {/* Notes List Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            {selectedCategory === 'Semua' ? 'Semua Catatan' : `Catatan ${selectedCategory}`}
-          </Text>
-          <Text style={styles.sectionBadge}>{filteredNotes.length} item</Text>
-        </View>
-
-        {loading ? (
-          <View style={styles.emptyContainer}>
-            <ActivityIndicator size="large" color="#5B8EA6" />
-          </View>
-        ) : (
-          <FlatList
-            data={filteredNotes}
-            keyExtractor={(item) => item.id}
-            renderItem={renderNoteItem}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={['#5B8EA6']}
-                tintColor="#5B8EA6"
-              />
-            }
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons
-                  name="document-text-outline"
-                  size={56}
-                  color="#7A8D9C"
-                  style={styles.emptyIcon}
-                />
-                <Text style={styles.emptyTitle}>Tidak Ada Catatan</Text>
-                <Text style={styles.emptyText}>
-                  {searchQuery
-                    ? `Tidak ada catatan yang cocok dengan "${searchQuery}".`
-                    : 'Ketuk tombol "+" di bawah untuk menambah catatan baru.'}
-                </Text>
-              </View>
-            }
-          />
-        )}
-
-        {/* FAB */}
-        <TouchableOpacity
-          style={styles.fab}
-          activeOpacity={0.85}
-          onPress={openAddModal}
-        >
-          <LinearGradient
-            colors={['#5B8EA6', '#3D6C82']}
-            style={styles.fabGradient}
-          >
-            <Ionicons name="add" size={32} color="#FFFFFF" />
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* Create / Edit Note Modal */}
-        <Modal
-          visible={modalVisible}
-          animationType="fade"
-          transparent
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalOverlay}
-          >
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>
-                {editingNote ? 'Edit Catatan' : 'Buat Catatan Baru'}
-              </Text>
-
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Judul Catatan..."
-                placeholderTextColor="#A0B0BC"
-                value={title}
-                onChangeText={setTitle}
-                maxLength={100}
-              />
-
-              <TextInput
-                style={styles.modalContentInput}
-                placeholder="Tulis isi catatan Anda di sini..."
-                placeholderTextColor="#A0B0BC"
-                value={content}
-                onChangeText={setContent}
-                multiline
-                numberOfLines={4}
-              />
-
-              <Text style={styles.label}>Pilih Kategori</Text>
-              <View style={styles.modalCategoryContainer}>
-                {['Pribadi', 'Pekerjaan', 'Ide'].map((cat) => (
+              {CATEGORIES.map((cat) => {
+                const isActive = selectedCategory === cat;
+                return (
                   <TouchableOpacity
                     key={cat}
-                    style={[
-                      styles.modalCategoryOption,
-                      category === cat && styles.modalCategoryOptionActive,
-                    ]}
-                    onPress={() => setCategory(cat)}
+                    style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                    onPress={() => setSelectedCategory(cat)}
                   >
                     <Text
-                      style={[
-                        styles.modalCategoryText,
-                        category === cat && styles.modalCategoryTextActive,
-                      ]}
+                      style={[styles.categoryChipText, isActive && styles.categoryChipTextActive]}
                     >
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Pinned Notes Section */}
+          {pinnedNotes.length > 0 && selectedCategory === 'Semua' && !searchQuery ? (
+            <View>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Catatan Disematkan</Text>
+                <Text style={styles.sectionBadge}>{pinnedNotes.length} disematkan</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.pinnedList}
+              >
+                {pinnedNotes.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.pinnedCard}
+                    activeOpacity={0.85}
+                    onPress={() => openEditModal(item)}
+                  >
+                    <View style={styles.pinnedCardHeader}>
+                      <View style={styles.pinBadge}>
+                        <Ionicons name="pin" size={12} color="#5B8EA6" />
+                        <Text style={styles.pinBadgeText}>Disematkan</Text>
+                      </View>
+                      {item.category ? (
+                        <Text style={styles.noteCategoryText}>{item.category}</Text>
+                      ) : null}
+                    </View>
+                    <Text style={styles.pinnedTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.pinnedContent} numberOfLines={2}>
+                      {item.content || 'Tidak ada isi...'}
+                    </Text>
+                    <Text style={styles.pinnedDate}>{formatDate(item.created_at)}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+
+          {/* Notes List Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              {selectedCategory === 'Semua' ? 'Semua Catatan' : `Catatan ${selectedCategory}`}
+            </Text>
+            <Text style={styles.sectionBadge}>{filteredNotes.length} item</Text>
+          </View>
+
+          {loading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color="#5B8EA6" />
+            </View>
+          ) : filteredNotes.length > 0 ? (
+            <View style={styles.listContainer}>
+              {filteredNotes.map((item) => renderNoteItem(item))}
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="document-text-outline" size={56} color="#7A8D9C" style={styles.emptyIcon} />
+              <Text style={styles.emptyTitle}>Tidak Ada Catatan</Text>
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? `Tidak ada catatan yang cocok dengan "${searchQuery}".`
+                  : 'Ketuk tombol "+" di bawah untuk menambah catatan baru.'}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Modal */}
+        <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={() => setModalVisible(false)}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>{editingNote ? 'Edit Catatan' : 'Buat Catatan Baru'}</Text>
+              <TextInput style={styles.modalInput} placeholder="Judul Catatan..." placeholderTextColor="#A0B0BC" value={title} onChangeText={setTitle} maxLength={100} />
+              <TextInput style={styles.modalContentInput} placeholder="Tulis isi catatan Anda di sini..." placeholderTextColor="#A0B0BC" value={content} onChangeText={setContent} multiline numberOfLines={4} />
+              
+              <Text style={styles.label}>Pilih Kategori</Text>
+              <View style={styles.modalCategoryContainer}>
+                {['Pribadi', 'Pekerjaan', 'Ide', 'Favorit'].map((cat) => (
+                  <TouchableOpacity 
+                    key={cat} 
+                    style={[styles.modalCategoryOption, category === cat && styles.modalCategoryOptionActive]} 
+                    onPress={() => setCategory(cat)}
+                  >
+                    <Text style={[styles.modalCategoryText, category === cat && styles.modalCategoryTextActive]}>
                       {cat}
                     </Text>
                   </TouchableOpacity>
@@ -633,39 +521,16 @@ export default function HomeScreen({ navigation }: Props) {
 
               <View style={styles.pinToggleRow}>
                 <Text style={styles.pinToggleText}>Sematkan ke atas Dashboard</Text>
-                <Switch
-                  value={isPinned}
-                  onValueChange={setIsPinned}
-                  trackColor={{ false: '#E8E2DA', true: '#5B8EA6' }}
-                  thumbColor="#FFFFFF"
-                />
+                <Switch value={isPinned} onValueChange={setIsPinned} trackColor={{ false: '#E8E2DA', true: '#5B8EA6' }} thumbColor="#FFFFFF" />
               </View>
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.modalCancelButton}
-                  onPress={() => setModalVisible(false)}
-                  disabled={saving}
-                >
+                <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisible(false)} disabled={saving}>
                   <Text style={styles.modalCancelText}>Batal</Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.modalSaveButton}
-                  onPress={handleSaveNote}
-                  disabled={saving}
-                >
-                  <LinearGradient
-                    colors={['#5B8EA6', '#3D6C82']}
-                    style={styles.modalSaveGradient}
-                  >
-                    {saving ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text style={styles.modalSaveText}>
-                        {editingNote ? 'Perbarui Catatan' : 'Simpan Catatan'}
-                      </Text>
-                    )}
+                <TouchableOpacity style={styles.modalSaveButton} onPress={handleSaveNote} disabled={saving}>
+                  <LinearGradient colors={['#5B8EA6', '#3D6C82']} style={styles.modalSaveGradient}>
+                    {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.modalSaveText}>{editingNote ? 'Perbarui Catatan' : 'Simpan Catatan'}</Text>}
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -673,6 +538,8 @@ export default function HomeScreen({ navigation }: Props) {
           </KeyboardAvoidingView>
         </Modal>
       </View>
+
+      <Navbar onAddPress={openAddModal} />
     </SafeAreaView>
   );
 }

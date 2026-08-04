@@ -96,11 +96,6 @@ export default function LoginScreen({ navigation }: Props) {
           <GlassCard>
             <Logo />
 
-            <Text style={styles.welcome}>Selamat Datang</Text>
-
-            <Text style={styles.subtitle}>
-              Masuk untuk melanjutkan aktivitas Anda.
-            </Text>
 
             <AuthInput
               icon="mail-outline"

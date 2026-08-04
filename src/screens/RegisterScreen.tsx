@@ -114,11 +114,6 @@ export default function RegisterScreen({ navigation }: Props) {
           <GlassCard>
             <Logo />
 
-            <Text style={styles.welcome}>Buat Akun Baru</Text>
-
-            <Text style={styles.subtitle}>
-              Daftar untuk mulai menggunakan Catatan App.
-            </Text>
 
             <AuthInput
               icon="mail-outline"
